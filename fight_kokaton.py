@@ -155,6 +155,28 @@ class Score:
         self.img = self.fonto.render(f"Score: {self.value}", 0, self.color)
         screen.blit(self.img, self.rct)
 
+class Explosion:
+    """
+    爆発エフェクトに関するクラス
+    """
+
+    def __init__(self, bomb):
+        img = pg.image.load("fig/explosion.gif")
+        img2 = pg.transform.flip(img, True, True)
+
+        self.imgs = [img, img2]
+
+        self.rct = self.imgs[0].get_rect()
+        self.rct.center = bomb.rct.center
+
+        self.life = 20
+
+    def update(self, screen):
+        self.life -= 1
+
+        if self.life > 0:
+            screen.blit(self.imgs[self.life % 2], self.rct)
+
 def main():
     pg.display.set_caption("たたかえ！こうかとん")
     screen = pg.display.set_mode((WIDTH, HEIGHT))    
@@ -167,6 +189,7 @@ def main():
     tmr = 0
     bombs = [Bomb((255, 0, 0), 10) for _ in range(NUM_OF_BOMBS)]
     beams = []  # 複数のビームを管理するためのリスト
+    explosions = []  # 爆発エフェクト管理用リスト
 
     while True:
         for event in pg.event.get():
@@ -198,6 +221,7 @@ def main():
                     continue
 
                 if beam.rct.colliderect(bomb.rct):
+                    explosions.append(Explosion(bomb)) # 爆弾破壊位置に爆発エフェクトを生成
                     score.value += 1  # 打ち落とした爆弾数を加算
                     beams[i] = None  # 当たったビームを消す
                     bombs[j] = None  # 当たった爆弾を消す
@@ -205,6 +229,7 @@ def main():
         beams = [beam for beam in beams if beam is not None]  # Noneのビームを削除
         bombs = [bomb for bomb in bombs if bomb is not None]  # Noneの爆弾を削除
         beams = [beam for beam in beams if check_bound(beam.rct) == (True, True)]  # 画面外のビームを削除
+        explosions = [exp for exp in explosions if exp.life > 0] # 寿命が尽きた爆発エフェクトを削除
 
         key_lst = pg.key.get_pressed()
         bird.update(key_lst, screen)
@@ -212,6 +237,8 @@ def main():
             beam.update(screen)
         for bomb in bombs:
             bomb.update(screen)
+        for exp in explosions: # 爆発エフェクトの更新・描画
+            exp.update(screen)
         score.update(screen)
         pg.display.update()
         tmr += 1

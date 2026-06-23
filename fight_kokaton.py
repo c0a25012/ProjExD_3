@@ -166,6 +166,7 @@ def main():
     clock = pg.time.Clock()
     tmr = 0
     bombs = [Bomb((255, 0, 0), 10) for _ in range(NUM_OF_BOMBS)]
+    beams = []  # 複数のビームを管理するためのリスト
 
     while True:
         for event in pg.event.get():
@@ -173,7 +174,7 @@ def main():
                 return
             if event.type == pg.KEYDOWN and event.key == pg.K_SPACE:
                 # スペースキー押下でBeamクラスのインスタンス生成
-                beam = Beam(bird)            
+                beams.append(Beam(bird))  # 新しいビームを生成してリストに追加          
         screen.blit(bg_img, [0, 0])
 
         for bomb in bombs:
@@ -188,20 +189,26 @@ def main():
                 time.sleep(1)
                 return
             
-        for i, bomb in enumerate(bombs):
-            if beam is not None:
-                if beam.rct.colliderect(bomb.rct): # ビームで爆弾を待ち落としたら
-                    score.value +=1 #scoreは１を追加する
-                    beam = None 
-                    bombs[i] = None
-                    bird.change_img(6, screen)
-                    score.update(screen)
-                    pg.display.update()
-        bombs = [bomb for bomb in bombs if bomb is not None]
+        for i, beam in enumerate(beams):  # ビームと爆弾の衝突判定
+            if beam is None:  # 削除済みのビームは処理しない
+                continue
+
+            for j, bomb in enumerate(bombs):
+                if bomb is None:
+                    continue
+
+                if beam.rct.colliderect(bomb.rct):
+                    score.value += 1  # 打ち落とした爆弾数を加算
+                    beams[i] = None  # 当たったビームを消す
+                    bombs[j] = None  # 当たった爆弾を消す
+                    break
+        beams = [beam for beam in beams if beam is not None]  # Noneのビームを削除
+        bombs = [bomb for bomb in bombs if bomb is not None]  # Noneの爆弾を削除
+        beams = [beam for beam in beams if check_bound(beam.rct) == (True, True)]  # 画面外のビームを削除
 
         key_lst = pg.key.get_pressed()
         bird.update(key_lst, screen)
-        if beam is not None: # beamが出現していたら
+        for beam in beams: # すべてのビームを更新・描画
             beam.update(screen)
         for bomb in bombs:
             bomb.update(screen)
